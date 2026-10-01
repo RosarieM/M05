@@ -1,0 +1,375 @@
+---
+title: "M05-Visualizing Data with Tables for MSDM CEP"
+subtitle: "Segment-level descriptive statistics with `gt` and `gtExtras`"
+author: "Rosarie Maramag"
+date: '`r format(Sys.time())`'
+format:
+  html:
+    output-file: index.html
+    theme: cosmo
+    toc: true
+    toc-depth: 3
+    toc-expand: 2
+    toc-title: "Contents"
+    number-sections: true
+    code-link: true
+    code-fold: true
+    code-tools: true
+    code-overflow: wrap
+    embed-resources: true
+    smooth-scroll: true
+    fig-cap-location: top
+editor: visual
+execute:
+  freeze: auto
+  warning: false
+  message: false
+---
+
+```{r}
+#| label: setup
+#| include: false
+library(tidyverse)
+library(gt)
+library(gtExtras)
+
+# Shared palette used throughout the report
+gef_blue <- "#2C7FB8"
+gef_grey <- "#6B7280"
+```
+
+# Introduction {#sec-intro}
+
+This report is part of my Master of Science in Digital Marketing (MSDM) Client Engagement Project (CEP) with the **Glendora Education Foundation (GEF)**. Our group is studying a connected supporter journey: an October 2026 \$25 membership drive, November cultivation, GivingTuesday on December 1, 2026, and the March 2027 Sip and Support event. My research objective (AO3) asks whether October's \$25 members become repeat donors and keep engaging with the Foundation by RSVPing for or attending Sip and Support.
+
+The purpose of this module is narrower: to learn how to communicate descriptive statistics with **tables** rather than only charts, using R, `gt`, and `gtExtras`. The deliverable is a table that could sit in a CEP report or client presentation.
+
+::: callout-note
+## About the data
+
+GEF's Network for Good exports do not exist yet. The membership campaign launches in October 2026, and fall data collection runs through Week 14. This report therefore uses the built-in `pizzaplace` dataset from the `gt` package as a **stand-in**. It is a transaction-level dataset with the same shape as CRM gift data, so the wrangling and table logic transfers directly once real exports arrive (see @sec-mapping).
+:::
+
+# What I Learned About Table-Based Visualization {#sec-learned}
+
+This section responds to the module's reflection essay. Each question is shown in a prompt box, followed by my response.
+
+## Summary of what I learned from the videos
+
+::: {.callout-note appearance="simple" icon="false"}
+**Prompt:** Summarize what you learned from the videos you watched.
+:::
+
+The main idea I took from the materials is that a table is a designed object. A good one has a clear hierarchy: a title and subtitle that state the point, grouped headers that organize related columns, readable labels, consistent number formats, and emphasis that sends the eye to what matters. A raw data frame printed to the screen has none of that, and readers must do the work of finding the message themselves.
+
+> A chart shows the shape of the data; a table lets the reader check the exact value.
+
+## What I liked about `gt` and `gtExtras`
+
+::: {.callout-note appearance="simple" icon="false"}
+**Prompt:** What did you like about the `gt` and `gtExtras` packages demonstrated in the videos?
+:::
+
+`gt` provides a grammar for building tables in layers. A table is assembled from parts (header, stub, column labels, spanners, body, footnotes, source notes), and each part is styled with its own functions such as `tab_header()`, `tab_spanner()`, `fmt_currency()`, `tab_footnote()`, and `tab_source_note()`. Because it is layered, the same pipeline reads cleanly and is easy to revise.
+
+`gtExtras` builds on that foundation. What I found most useful is that it puts small graphics *inside* table cells: sparklines for trends, density plots for distributions, in-cell bars for shares, and ready-made themes. That makes one row carry both a precise number and a visual impression of it. It also means the table can show a trend or a distribution without a separate figure.
+
+## How tables complement charts
+
+::: {.callout-note appearance="simple" icon="false"}
+**Prompt:** How do tables complement charts for data visualization?
+:::
+
+Charts and tables answer different questions. Charts are better for patterns, such as direction, shape, outliers, and relationships. Tables are better for lookup and comparison of exact values. In practice they complement each other: the chart earns attention and the table supplies the evidence. In-cell graphics from `gtExtras` blur the line, since each row of a table becomes a miniature chart.
+
+## When I would choose a table over a chart
+
+::: {.callout-note appearance="simple" icon="false"}
+**Prompt:** Under what circumstances would you prefer to use tables rather than charts to visualize data?
+:::
+
+A table is usually the stronger choice when:
+
+-   readers need **exact values**, such as dollar totals or counts they may quote;
+-   the data mix **different units or scales** (counts, currency, percentages) that would need separate axes in a chart;
+-   there are **many categories with several metrics each**, where a chart would be crowded;
+-   the audience will **compare across rows and columns** or look up specific items; or
+-   the output is a **reference** in a report appendix or a client handout.
+
+For GEF this matters in particular. Board members and volunteers often want to know exactly how many members gave again and how much they gave, so exact figures matter as much as the pattern.
+
+# Using `gt` and `gtExtras` {#sec-using}
+
+::: {.callout-note appearance="simple" icon="false"}
+**Prompt:** Use the data for your MSDM CEP (or the built-in `pizzaplace` dataset if you do not have data yet). Pick variables relevant to your analytics objectives and share descriptive statistics using `gt` and `gtExtras` together, so that numbers and small charts appear in one table. At a minimum, incorporate:
+
+-   titles and subtitles
+-   a label for the stub head
+-   relabeled variable names
+-   source notes and footnotes
+-   a spanner column label
+-   numbers formatted to 2 decimal places, with currency signs where applicable
+-   color applied to a column or row of numeric data
+-   additional functions as needed
+:::
+
+The table is built in @sec-table after the data preparation in @sec-prep. The checklist below shows where each requirement is implemented.
+
+The table below is built from a short sequence of steps. Each step maps to a `gt` or `gtExtras` function.
+
+| Design goal | Function(s) used |
+|----|----|
+| Title, subtitle, source note | `tab_header()`, `tab_source_note()` |
+| Labeled stub and readable names | `rowname_col`, `tab_stubhead()`, `cols_label()` |
+| Grouped columns | `tab_spanner()` |
+| Number and currency formatting | `fmt_number()`, `fmt_currency()` |
+| Highlighting numeric values | `data_color()` |
+| In-cell visuals | `gt_plt_bar_pct()`, `gt_plt_sparkline()`, `gt_plt_dist()` |
+| Explanatory notes | `tab_footnote()` |
+| Overall styling | `gt_theme_538()`, `tab_options()` |
+
+: Functions used to build the table {#tbl-functions}
+
+# Data Preparation {#sec-prep}
+
+## Data source and stand-in logic {#sec-mapping}
+
+`pizzaplace` contains one row per pizza sold at a pizzeria in 2015, with a date, time, pizza name, category, size, and price. I treat it as an analogue of a CRM gift file, which lets me practice the segment comparison that AO3 will need.
+
+| `pizzaplace` field | GEF CRM analogue |
+|----|----|
+| Pizza category (`type`) | Donor segment (existing donor, new member, engaged non-member) |
+| Price | Gift or membership amount |
+| Month of sale | Campaign stage over time (October to March) |
+| One row per pizza | One row per transaction |
+
+: How the stand-in data maps to the CEP {#tbl-mapping}
+
+## Exploring and wrangling
+
+::: panel-tabset
+### Raw structure
+
+```{r}
+#| label: explore-raw
+glimpse(pizzaplace)
+```
+
+### Quality checks
+
+```{r}
+#| label: quality-checks
+pizzaplace |>
+  summarise(
+    rows            = n(),
+    missing_prices  = sum(is.na(price)),
+    first_date      = min(date),
+    last_date       = max(date),
+    categories      = n_distinct(type)
+  )
+```
+
+### Wrangling steps
+
+```{r}
+#| label: wrangle
+# 1. Keep valid transactions and the variables needed for analysis
+pizza_clean <- pizzaplace |>
+  filter(!is.na(price)) |>
+  select(date, type, size, price) |>
+  mutate(
+    month = lubridate::month(date),
+    type_label = str_to_title(type)
+  )
+
+# 2. Monthly revenue per category, stored as a list-column for sparklines
+monthly_trend <- pizza_clean |>
+  group_by(type_label, month) |>
+  summarise(monthly_revenue = sum(price), .groups = "drop") |>
+  arrange(type_label, month) |>
+  group_by(type_label) |>
+  summarise(monthly_revenue = list(monthly_revenue), .groups = "drop")
+
+# 3. Price values per category, stored as a list-column for density plots
+price_dist <- pizza_clean |>
+  group_by(type_label) |>
+  summarise(price_dist = list(price), .groups = "drop")
+
+# 4. Descriptive statistics per category
+pizza_stats <- pizza_clean |>
+  group_by(type_label) |>
+  summarise(
+    pizzas_sold   = n(),
+    total_revenue = sum(price),
+    avg_price     = mean(price),
+    median_price  = median(price),
+    sd_price      = sd(price),
+    .groups = "drop"
+  ) |>
+  mutate(revenue_share = total_revenue / sum(total_revenue) * 100) |>
+  left_join(monthly_trend, by = "type_label") |>
+  left_join(price_dist, by = "type_label") |>
+  arrange(desc(total_revenue)) |>
+  select(type_label, pizzas_sold, total_revenue, revenue_share,
+         avg_price, median_price, sd_price, monthly_revenue, price_dist)
+
+pizza_stats |> select(-monthly_revenue, -price_dist)
+```
+:::
+
+::: callout-tip
+## Why list-columns?
+
+`gt_plt_sparkline()` and `gt_plt_dist()` draw one small graphic per row, so each row needs its whole series of values. Storing those values in a list-column keeps the data tidy: one row per segment, with the series attached.
+:::
+
+# Enhanced Data Table {#sec-table}
+
+@tbl-pizza summarizes sales by pizza category. Metrics are grouped into two spanners, **Sales Performance** and **Price Statistics**, and the two right-hand columns show monthly trend and price distribution graphically.
+
+```{r}
+#| label: tbl-pizza
+#| tbl-cap: "Sales performance and price statistics by pizza category"
+#| code-fold: true
+
+pizza_stats |>
+  gt(rowname_col = "type_label") |>
+  # Titles and notes -------------------------------------------------------
+  tab_header(
+    title    = md("**Pizza Sales by Category: Who Drives Revenue?**"),
+    subtitle = "Volume, revenue share, price spread, and monthly trend, 2015"
+  ) |>
+  tab_stubhead(label = "Pizza Category") |>
+  tab_source_note(
+    source_note = md("Source: `pizzaplace` dataset, `gt` package (2015 transactions).")
+  ) |>
+  # Spanners ---------------------------------------------------------------
+  tab_spanner(
+    label   = "Sales Performance",
+    columns = c(pizzas_sold, total_revenue, revenue_share)
+  ) |>
+  tab_spanner(
+    label   = "Price Statistics",
+    columns = c(avg_price, median_price, sd_price)
+  ) |>
+  tab_spanner(
+    label   = "Visual Summary",
+    columns = c(monthly_revenue, price_dist)
+  ) |>
+  # Readable labels --------------------------------------------------------
+  cols_label(
+    pizzas_sold     = "Pizzas Sold",
+    total_revenue   = "Total Revenue",
+    revenue_share   = "Revenue Share (%)",
+    avg_price       = "Mean Price",
+    median_price    = "Median Price",
+    sd_price        = "Std. Dev.",
+    monthly_revenue = "Monthly Revenue Trend",
+    price_dist      = "Price Distribution"
+  ) |>
+  # Number formatting ------------------------------------------------------
+  fmt_number(columns = pizzas_sold, decimals = 0, use_seps = TRUE) |>
+  fmt_currency(columns = c(total_revenue, avg_price, median_price, sd_price),
+               currency = "USD", decimals = 2) |>
+  # Highlight numeric values -------------------------------------------------
+  data_color(
+    columns = avg_price,
+    palette = c("#EFF3FF", "#6BAED6")
+  ) |>
+  # gtExtras in-cell graphics ----------------------------------------------
+  gt_plt_bar_pct(
+    column = revenue_share,
+    scaled = TRUE,
+    fill = gef_blue,
+    background = "#E5E7EB"
+  ) |>
+  gt_plt_sparkline(
+    column = monthly_revenue,
+    type = "shaded",
+    label = FALSE,
+    palette = c("black", gef_blue, "#D95F02", "#1B9E77", "grey")
+  ) |>
+  gt_plt_dist(
+    column = price_dist,
+    type = "density",
+    line_color = gef_blue,
+    fill_color = "#BDD7E7"
+  ) |>
+  # Footnotes --------------------------------------------------------------
+  tab_footnote(
+    footnote  = "Revenue share is each category's total revenue divided by revenue across all categories.",
+    locations = cells_column_labels(columns = revenue_share)
+  ) |>
+  tab_footnote(
+    footnote  = "Standard deviation measures how much prices vary within a category (a wider spread means a broader price range).",
+    locations = cells_column_labels(columns = sd_price)
+  ) |>
+  tab_footnote(
+    footnote  = "Sparkline shows total revenue for each of the 12 months, January to December.",
+    locations = cells_column_labels(columns = monthly_revenue)
+  ) |>
+  # Alignment and theme ----------------------------------------------------
+  cols_align(align = "center", columns = -type_label) |>
+  gt_theme_538() |>
+  tab_options(
+    table.width = pct(100),
+    heading.align = "left",
+    column_labels.font.weight = "bold"
+  )
+```
+
+# Why This Visualization Matters {#sec-value}
+
+::: {.callout-note appearance="simple" icon="false"}
+**Prompt:** Explain why the table is worth adding to your MSDM project written report or presentation slides.
+:::
+
+## What the table communicates
+
+@tbl-pizza shows, in one place, how each category contributes to total sales, how much it sells, how it is priced, and how its sales moved across the year. A reader can see which category leads in volume and revenue, whether that lead comes from selling more units or from higher prices, and whether a category's sales are steady or concentrated in particular months.
+
+## Why these metrics
+
+-   **Pizzas sold, total revenue, and revenue share** answer "how much does each segment contribute?" They are the CRM equivalents of the number of gifts, total dollars raised, and share of the donor pool's giving.
+-   **Mean, median, and standard deviation of price** separate volume from value. If the mean and median diverge, or the standard deviation is large, a few high-value transactions may be driving the average. That is the same issue as a few large gifts distorting average gift size.
+-   **Monthly trend** gives the time dimension, which matters because the GEF journey unfolds across stages (October, November, December, March).
+-   **Price distribution** shows the shape of values within each group without needing a separate histogram for each.
+
+## Connection to the CEP objectives
+
+AO3 compares existing donors, new \$25 members, and engaged non-members, then tracks whether members give again on GivingTuesday and RSVP for Sip and Support. A table with this structure fits that work directly:
+
+1.  **Segment comparison.** Rows become donor segments, and columns report count, total giving, average gift, and share of revenue.
+2.  **Conversion tracking.** Count and percentage columns can show how many October members gave on GivingTuesday and how many RSVPed or attended in March.
+3.  **Journey over time.** The sparkline column becomes a segment's activity from October through March.
+4.  **Practicality for GEF.** With one staff member and volunteers, GEF needs a compact, repeatable report. This table can be regenerated from each Network for Good export by rerunning the same code.
+
+## What a table shows that a chart alone may not
+
+A bar chart of revenue by category would show the ranking but hide the exact dollar totals and the price spread. A line chart of monthly revenue would show seasonality but not the stable ordering of categories or the precise figures. The table lets a reader quote exact numbers, compare several metrics for one row, and still see the visual pattern, all at once. In a written report it serves as the reference figure, and in a presentation it can be the single slide that anchors the discussion.
+
+# Conclusion {#sec-conclusion}
+
+Tables are a strong visualization tool when they are designed with the same care as a chart. `gt` supplies the structure and formatting, and `gtExtras` adds in-cell graphics that make a dense summary quick to read. The skills practiced here (wrangling to one row per segment, computing descriptive statistics, and layering formatting and in-cell visuals) will carry over once GEF's Network for Good data is available.
+
+For the CEP, the next step is to replace `pizzaplace` with the anonymized membership, GivingTuesday, and Sip and Support records, keeping the same table structure with donor segments as rows and journey metrics as columns.[^1]
+
+[^1]: The mapping in @tbl-mapping is illustrative. The final metrics will depend on the fields available in the Network for Good exports and on the KPIs the group agrees on with GEF.
+
+# Appendix {#sec-appendix}
+
+::: {.callout-note appearance="simple" icon="false"}
+**Prompt:** Push your project folder to GitHub and publish the HTML file to GitHub Pages. Add an Appendix section with clickable links to both URLs.
+:::
+
+## Project links
+
+-   **GitHub repository:** [GitHub repository (replace with your URL)](https://github.com/YOUR-USERNAME/YOUR-REPO)
+-   **Published GitHub Pages report:** [GitHub Pages version (replace with your URL)](https://YOUR-USERNAME.github.io/YOUR-REPO/)
+
+## Session information
+
+```{r}
+#| label: session-info
+sessionInfo()
+```
